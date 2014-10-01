@@ -6,20 +6,23 @@ try:
 except:
     from distutils.core import setup, find_packages
 
+import dapp
+
 setup(
     name='dapp',
-    version='0.0.1',
-    description='Short description',
+    version=dapp.__version__,
+    description='Library implementing DevAssistant PingPong protocol',
     long_description=''.join(open('README.rst').readlines()),
-    keywords='some, keywords',
-    author='yourname',
-    author_email='yourmail',
-    license='GPLv2',
+    keywords='devassistant,pipe,protocol,pingpong',
+    author='Bohuslav "Slavek" Kabrda',
+    author_email='bkabrda@redhat.com',
+    license='GPLv2+',
     packages=find_packages(),
+    install_requires=['PyYAML'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
+        'License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)',
         'Operating System :: POSIX :: Linux',
         'Programming Language :: Python',
         ]
