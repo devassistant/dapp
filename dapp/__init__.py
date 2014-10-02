@@ -242,14 +242,19 @@ class DAPPClient(DAPPCommunicator):
            executable assistants)
         3) sends a message of type "finished" with result of the execution
         """
+        # wait for "run" message
         msg = self.recv_msg()
         if msg['msg_type'] != 'run':
             raise # TODO
-        run_result = self.run(msg['ctxt'])
-        if not isinstance(run_result, tuple) or len(run_result) != 3:
+        ctxt = msg['ctxt']
+
+        # actually run
+        run_result = self.run(ctxt)
+        if not isinstance(run_result, tuple) or len(run_result) != 2:
             raise # TODO
-        # TODO we should send the resulting context, too
-        self.send_msg(msg_type='finished', ctxt=run_result[2],
+
+        # send "finished" message to DevAssistant
+        self.send_msg(msg_type='finished', ctxt=ctxt,
             data={'lres': run_result[0], 'res': run_result[1]})
 
     def call_command(self, command_type, command_input, ctxt):
@@ -261,10 +266,17 @@ class DAPPClient(DAPPCommunicator):
             ctxt: the global context
 
         Returns:
-            3-tuple - logical result of command, result of command, new global context (might
-            have been modified by the command)
+            2-tuple - logical result of command and result of command
+            note, that ctxt argument gets modified if the command runner modifies it
         """
         self.send_msg(msg_type='call_command', ctxt=ctxt,
             data={'command_type': command_type, 'command_input': command_input})
         response = self.recv_msg()
-        return response['lres'], response['res'], response['ctxt']
+        # we can't use ctxt.update(response['ctxt']), because the command might have
+        #  also deleted some variables from the context
+        for k, v in response['ctxt'].items():
+            if k not in ctxt:
+                del ctxt[k]
+            else:
+                ctxt[k] = v
+        return response['lres'], response['res']
