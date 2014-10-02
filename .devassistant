@@ -1,12 +1,5 @@
 dependencies:
-- rpm:
-  - python${py3}
-- if $venv:
-  - rpm:
-    - python-virtualenv
-- else:
-  - rpm:
-    - python-setuptools
+- rpm: [python, python-setuptools, PyYAML, python-six]
 devassistant_version: 0.10.0.dev2
 original_kwargs:
   name: !!python/unicode 'dapp'
