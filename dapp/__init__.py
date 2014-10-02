@@ -28,11 +28,14 @@ def update_ctxt(old, new):
     """This method works much like dict.update, but it also deletes keys from old dict
     that are not in new dict.
     """
-    for k, v in new.items():
-        if k not in new and k not in ctxt_ignore:
+    allkeys = set(old.keys()) | set(new.keys())
+    for k in allkeys:
+        if k in ctxt_ignore:
+            continue
+        elif k not in new:
             del old[k]
         else:
-            old[k] = v
+            old[k] = new[k]
 
 class DAPPCommunicator(object):
     def __init__(self, protocol_version=__version__, logger=None):
@@ -242,6 +245,7 @@ class DAPPServer(DAPPCommunicator):
             rest = self.proc.stdout.read().decode('utf8')[:-1].splitlines()
             lines.extend(rest)
 
+        # TODO: this sometimes seems to omit some lines from the message - find out why
         self.log(logging.DEBUG,
             'Got message from PingPong subprocess:\n{0}'.format('\n'.join(lines)))
         msg = self._message_from_start_stop_list(lines)
