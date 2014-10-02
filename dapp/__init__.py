@@ -22,6 +22,18 @@ class DAPPNoSuchCommand(DAPPException):
 class DAPPCommandException(DAPPException):
     pass
 
+ctxt_ignore = ['__assistant__']
+
+def update_ctxt(old, new):
+    """This method works much like dict.update, but it also deletes keys from old dict
+    that are not in new dict.
+    """
+    for k, v in new.items():
+        if k not in new and k not in ctxt_ignore:
+            del old[k]
+        else:
+            old[k] = v
+
 class DAPPCommunicator(object):
     def __init__(self, protocol_version=__version__, logger=None):
         self.protocol_version = protocol_version
@@ -145,12 +157,12 @@ class DAPPCommunicator(object):
 
         Returns:
             dict with one key "ctxt" and value which contains the whole dumped context;
-            "__assistant__" is always omitted from the context
+            keys listed in global variable ctxt_ignore are always omitted from the context
         """
         dumped = {'ctxt': {}}
         for k, v in ctxt.items():
                 # exclude unwanted keys
-            if k not in ['__assistant__']:
+            if k not in ctxt_ignore:
                 dumped['ctxt'][k] = v
         # we want to produce unencoded string here (e.g. unicode in py2, str in py3)
         #  so we need to pass encoding=None
@@ -361,9 +373,5 @@ class DAPPClient(DAPPCommunicator):
                 format(e=response['exception']))
         # we can't use ctxt.update(response['ctxt']), because the command might have
         #  also deleted some variables from the context
-        for k, v in response['ctxt'].items():
-            if k not in ctxt:
-                del ctxt[k]
-            else:
-                ctxt[k] = v
+        update_ctxt(ctxt, response['ctxt'])
         return response['lres'], response['res']
