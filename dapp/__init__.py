@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-# TODO: what to do if:
-#  1) client calls a non existing command runner? (should it be handled here or in DA itself?)
 import logging
 import sys
 
@@ -16,6 +14,12 @@ class DAPPBadMsgType(DAPPException):
     pass
 
 class DAPPBadProtocolVersion(DAPPException):
+    pass
+
+class DAPPNoSuchCommand(DAPPException):
+    pass
+
+class DAPPCommandException(DAPPException):
     pass
 
 class DAPPCommunicator(object):
@@ -209,6 +213,9 @@ class DAPPServer(DAPPCommunicator):
     def send_msg_command_result(self, ctxt=None, lres=False, res=''):
         self.send_msg(msg_type='command_result', ctxt=ctxt, data={'lres': lres, 'res': res})
 
+    def send_msg_command_exception(self, ctxt=None, exception=''):
+        self.send_msg(msg_type='command_exception', ctxt=ctxt, data={'exception': exception})
+
     def recv_msg(self, allowed_types=None):
         # throughout this method, we strip just the trailing newline
         #  from proc.stdout, since we want to get precise lines (whitespace can be significant)
@@ -261,9 +268,9 @@ class DAPPClient(DAPPCommunicator):
         self.write_fd.write(msg)
         self.write_fd.flush()
 
-    def send_msg_fail(self, ctxt=None, fail_desc=''):
+    def send_msg_failed(self, ctxt=None, fail_desc=''):
         """A shortcut to send "fail" message."""
-        self.send_msg(msg_type='fail', ctxt=ctxt, data={'fail_desc': fail_desc})
+        self.send_msg(msg_type='failed', ctxt=ctxt, data={'fail_desc': fail_desc})
 
     def send_msg_finished(self, ctxt=None, lres=False, res=''):
         """A shortcut to send "finished" message."""
@@ -300,10 +307,10 @@ class DAPPClient(DAPPCommunicator):
         try:
             msg = self.recv_msg(allowed_types=['run'])
         except DAPPException as e:
-            self.send_msg_fail(ctxt=None, fail_desc=str(e))
+            self.send_msg_failed(ctxt=None, fail_desc=str(e))
         fail_desc = None
         if fail_desc is not None:
-            self.send_msg_fail(ctxt, fail_desc)
+            self.send_msg_failed(ctxt, fail_desc)
             sys.exit(1)
 
         # actually run
@@ -311,15 +318,15 @@ class DAPPClient(DAPPCommunicator):
         try:
             run_result = self.run(ctxt)
         except BaseException as e:
-            fail_desc = 'PingPong run method ended with an exception:\n{e}'.format(e)
-            self.send_msg_fail(ctxt, fail_desc)
+            fail_desc = 'PingPong run method ended with an exception:\n{e}'.format(e=e)
+            self.send_msg_failed(ctxt, fail_desc)
             sys.exit(1)
 
         if not isinstance(run_result, tuple) or len(run_result) != 2:
             fail_desc = ['PingPong run method ended with unexpected result:',
                 str(run_result),
                 '(expected 2-tuple)']
-            self.send_msg_fail(ctxt, fail_desc)
+            self.send_msg_failed(ctxt, fail_desc)
             sys.exit(1)
 
         # send "finished" message to DevAssistant
@@ -336,12 +343,22 @@ class DAPPClient(DAPPCommunicator):
         Returns:
             2-tuple - logical result of command and result of command
             note, that ctxt argument gets modified if the command runner modifies it
+
+        Raises:
+            DAPPNoSuchCommand if there is no such command
         """
         self.send_msg(msg_type='call_command', ctxt=ctxt,
             data={'command_type': command_type, 'command_input': command_input})
         # if an exception is raised here, let it bubble up so that the calling method can
         #  deal with it as it wishes
-        response = self.recv_msg(allowed_types=['command_result'])
+        response = self.recv_msg(allowed_types=['command_result', 'no_such_command',
+            'command_exception'])
+        if response['msg_type'] == 'no_such_command':
+            raise DAPPNoSuchCommand('No such DevAssistant command: "{ct}".'.\
+                format(ct=command_type))
+        elif response['msg_type'] == 'command_exception':
+            raise DAPPCommandException('DevAssistant command raised exception:\n"{e}"'.\
+                format(e=response['exception']))
         # we can't use ctxt.update(response['ctxt']), because the command might have
         #  also deleted some variables from the context
         for k, v in response['ctxt'].items():
