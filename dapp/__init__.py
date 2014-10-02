@@ -164,6 +164,13 @@ class DAPPServer(DAPPCommunicator):
                 msg += 'Subprocess output:\n' + out
             raise DAPPException(msg)
 
+    def send_msg_run(self, ctxt=None):
+        """A shortcut to send "run" message."""
+        self.send_msg(msg_type='run', ctxt=ctxt)
+
+    def send_msg_command_result(self, ctxt=None, lres=False, res=''):
+        self.send_msg(msg_type='command_result', ctxt=ctxt, data={'lres': lres, 'res': res})
+
     def recv_msg(self):
         # throughout this method, we strip just the trailing newline
         #  from proc.stdout, since we want to get precise lines (whitespace can be significant)
@@ -216,9 +223,13 @@ class DAPPClient(DAPPCommunicator):
         self.write_fd.write(msg)
         self.write_fd.flush()
 
-    def send_msg_fail(self, ctxt, fail_desc):
+    def send_msg_fail(self, ctxt=None, fail_desc=''):
         """A shortcut to send "fail" message."""
         self.send_msg(msg_type='fail', ctxt=ctxt, data={'fail_desc': fail_desc})
+
+    def send_msg_finished(self, ctxt=None, lres=False, res=''):
+        """A shortcut to send "finished" message."""
+        self.send_msg(msg_type='finished', ctxt=ctxt, data={'lres': lres, 'res':res})
 
     def recv_msg(self):
         lines = []
@@ -279,8 +290,7 @@ class DAPPClient(DAPPCommunicator):
             sys.exit(1)
 
         # send "finished" message to DevAssistant
-        self.send_msg(msg_type='finished', ctxt=ctxt,
-            data={'lres': run_result[0], 'res': run_result[1]})
+        self.send_msg_finished(ctxt, lres=run_result[0], res=run_result[1])
 
     def call_command(self, command_type, command_input, ctxt):
         """Call a DevAssistant command.
