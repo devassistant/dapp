@@ -251,16 +251,20 @@ class DAPPClient(DAPPCommunicator):
         msg = self.recv_msg()
         fail_desc = None
         # for now, let's be very strict about the protocol version
-        if msg['protocol_version'] != self.protocol_version:
-            fail_desc = 'PingPong client needs protocol version {v}'.format(v=self.protocol_version)
+        server_pv = msg.get('dapp_protocol_version', 'none')
+        msg_type = msg.get('msg_type', 'none')
+        if server_pv != self.protocol_version:
+            fail_desc = 'PingPong client needs protocol version "{cv}", but server sent {sv}'.\
+                format(cv=self.protocol_version, sv=server_pv)
         if msg['msg_type'] != 'run':
-            fail_desc = 'PingPong client expected "run" message, got "{m}"'.format(m=msg['msg_type'])
+            fail_desc = 'PingPong client expected "msg_type" to be "run" message, got "{m}"'.\
+                format(m=msg['msg_type'])
         if fail_desc is not None:
             self.send_msg_fail(ctxt, fail_desc)
             sys.exit(1)
 
         # actually run
-        ctxt = msg['ctxt']
+        ctxt = msg.get('ctxt', {})
         try:
             run_result = self.run(ctxt)
         except BaseException as e:
