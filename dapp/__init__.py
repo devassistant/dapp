@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 # TODO: what to do if:
-#  1) there's unsupported protocol version on the other side? (fail?)
-#  2) message is not understood/malformed? (fail?/warn and continue?)
-#  3) client calls a non existing command runner? (should it be handled here or in DA itself?)
+#  1) message is not understood/malformed? (fail?/warn and continue?)
+#  2) client calls a non existing command runner? (should it be handled here or in DA itself?)
 import logging
 import sys
 
@@ -154,12 +153,12 @@ class DAPPServer(DAPPCommunicator):
         if data:
             send_msg.update(data)
         msg = self._compose_msg(ctxt, data=send_msg)
-        self.log(logging.DEBUG, 'Sending message to pingpong subprocess:\n' + msg)
+        self.log(logging.DEBUG, 'Sending message to PingPong subprocess:\n' + msg)
         try:
             self.proc.stdin.write(msg)
             self.proc.stdin.flush()
         except IOError as e:
-            msg = 'Error writing data to pingpong subprocess: {0}\n'.format(e)
+            msg = 'Error writing data to PingPong subprocess: {0}\n'.format(e)
             out = self._try_read_subprocess_error()
             if out:
                 msg += 'Subprocess output:\n' + out
@@ -180,7 +179,7 @@ class DAPPServer(DAPPCommunicator):
             lines.extend(rest)
 
         self.log(logging.DEBUG,
-            'Got message from pingpong subprocess:\n{0}'.format('\n'.join(lines)))
+            'Got message from PingPong subprocess:\n{0}'.format('\n'.join(lines)))
         msg = self._message_from_start_stop_list(lines)
         if msg is None:
             return None
@@ -213,9 +212,13 @@ class DAPPClient(DAPPCommunicator):
         if data:
             send_msg.update(data)
         msg = self._compose_msg(ctxt, data=send_msg)
-        self.log(logging.DEBUG, 'Sending message to pingpong server:\n' + msg.decode('utf8'))
+        self.log(logging.DEBUG, 'Sending message to PingPong server:\n' + msg.decode('utf8'))
         self.write_fd.write(msg)
         self.write_fd.flush()
+
+    def send_msg_fail(self, ctxt, fail_desc):
+        """A shortcut to send "fail" message."""
+        self.send_msg(msg_type='fail', ctxt=ctxt, data={'fail_desc': fail_desc})
 
     def recv_msg(self):
         lines = []
@@ -241,17 +244,35 @@ class DAPPClient(DAPPCommunicator):
         2) call the "run" method (this is supposed to be subclassed in the actual
            executable assistants)
         3) sends a message of type "finished" with result of the execution
+
+        If an error occurs, a "fail" message with "fail_desc" is sent and sys.exit(1) is called.
         """
         # wait for "run" message
         msg = self.recv_msg()
+        fail_desc = None
+        # for now, let's be very strict about the protocol version
+        if msg['protocol_version'] != self.protocol_version:
+            fail_desc = 'PingPong client needs protocol version {v}'.format(v=self.protocol_version)
         if msg['msg_type'] != 'run':
-            raise # TODO
-        ctxt = msg['ctxt']
+            fail_desc = 'PingPong client expected "run" message, got "{m}"'.format(m=msg['msg_type'])
+        if fail_desc is not None:
+            self.send_msg_fail(ctxt, fail_desc)
+            sys.exit(1)
 
         # actually run
-        run_result = self.run(ctxt)
+        ctxt = msg['ctxt']
+        try:
+            run_result = self.run(ctxt)
+        except BaseException as e:
+            fail_desc = 'PingPong run method ended with an exception:\n{e}'.format(e)
+            self.send_msg_fail(ctxt, fail_desc)
+
         if not isinstance(run_result, tuple) or len(run_result) != 2:
-            raise # TODO
+            fail_desc = ['PingPong run method ended with unexpected result:',
+                str(run_result),
+                '(expected 2-tuple)']
+            self.send_msg_fail(ctxt, fail_desc)
+            sys.exit(1)
 
         # send "finished" message to DevAssistant
         self.send_msg(msg_type='finished', ctxt=ctxt,
