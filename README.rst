@@ -56,7 +56,7 @@ and can look like this::
 Things to Note
 --------------
 
-- The executable assistant has to subclass dapp.DAPPClient
+- The executable assistant has to subclass ``dapp.DAPPClient``.
 - The ``run`` method has to accept two arguments, ``self`` (Python specific argument pointing to
   the object) and ``ctxt``. The ``ctxt`` is a dict (Python mapping type) that holds the global context
   of the Yaml DSL (e.g. it contains the ``name`` argument, if it was specificed by user on command
