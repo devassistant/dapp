@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # TODO: what to do if:
-#  1) message is not understood/malformed? (fail?/warn and continue?)
-#  2) client calls a non existing command runner? (should it be handled here or in DA itself?)
+#  1) client calls a non existing command runner? (should it be handled here or in DA itself?)
 import logging
 import sys
 
@@ -11,6 +10,12 @@ import yaml
 __version__ = "0.0.1"
 
 class DAPPException(BaseException):
+    pass
+
+class DAPPBadMsgType(DAPPException):
+    pass
+
+class DAPPBadProtocolVersion(DAPPException):
     pass
 
 class DAPPCommunicator(object):
@@ -31,8 +36,13 @@ class DAPPCommunicator(object):
         """
         raise NotImplementedError()
 
-    def recv_msg(self):
+    def recv_msg(self, allowed_types=None):
         """Receive a message to the other communicating side through the pipe.
+
+        Args:
+            allowed_types: list of allowed types or None; if None is specified, then any message
+                type is accepted; if a list of types is specified and message type is not in
+                the list, DAPPBadMsgType is raised
 
         Return:
             dict of decoded data sent through the pipe by the other side
@@ -40,6 +50,8 @@ class DAPPCommunicator(object):
         Raises:
             DAPPException if something goes wrong while message is being sent or
                 if the message is malformed
+            DAPPBadMsgType if msg_type is not in allowed_types and allowed_types is not None
+            DAPPBadProtocolVersion if sent message has unsupported protocol version
         """
         raise NotImplementedError()
 
@@ -141,6 +153,31 @@ class DAPPCommunicator(object):
         #  http://pyyaml.org/wiki/PyYAMLDocumentation#Python3support
         return yaml.dump(dumped, encoding=None, default_flow_style=False)
 
+    def _check_loaded_msg(self, msg, allowed_types):
+        """Does sanity checking of the message, checks that it has a proper type and
+        protocol version.
+
+        Raises:
+            DAPPException if the message is not a dict or does not contain "msg_type" or "ctxt"
+            DAPPBadMsgType if msg_type is not in allowed_types and allowed_types is not None
+            DAPPBadProtocolVersion if sent message has unsupported protocol version
+        """
+        if not isinstance(msg, dict):
+            raise DAPPException('PingPong message not a mapping.')
+        if 'msg_type' not in msg:
+            raise DAPPException('PingPong message doesn\'t contain "msg_type".')
+        if 'ctxt' not in msg:
+            raise DAPPException('PingPong message doesn\'t containe "ctxt".')
+        if allowed_types is not None and msg['msg_type'] not in allowed_types:
+            raise DAPPBadMsgType('Expected one of "{at}" message types, got "{mt}".'.\
+                format(at=', '.join(allowed_types), mt=msg['msg_type']))
+        # for now, let's be very strict about the protocol version
+        other_pv = msg.get('dapp_protocol_version', 'none')
+        if other_pv != self.protocol_version:
+            err = 'PingPong client needs protocol version "{sv}", but server sent "{ov}"'.\
+                format(sv=self.protocol_version, ov=other_pv)
+            raise DAPPBadProtocolVersion(err)
+
 
 class DAPPServer(DAPPCommunicator):
     def __init__(self, proc, protocol_version=__version__, logger=None):
@@ -148,7 +185,8 @@ class DAPPServer(DAPPCommunicator):
         self.proc = proc
 
     def send_msg(self, msg_type, ctxt=None, data=None):
-        # TODO: check msg_type and data
+        # TODO: check msg_type and data? we probably trust ourselves that we're sending a
+        #  properly formed message, so let's not check anything here for now
         send_msg = {'msg_type': msg_type}
         if data:
             send_msg.update(data)
@@ -171,7 +209,7 @@ class DAPPServer(DAPPCommunicator):
     def send_msg_command_result(self, ctxt=None, lres=False, res=''):
         self.send_msg(msg_type='command_result', ctxt=ctxt, data={'lres': lres, 'res': res})
 
-    def recv_msg(self):
+    def recv_msg(self, allowed_types=None):
         # throughout this method, we strip just the trailing newline
         #  from proc.stdout, since we want to get precise lines (whitespace can be significant)
         lines = []
@@ -192,7 +230,7 @@ class DAPPServer(DAPPCommunicator):
             return None
 
         parsed_yaml = yaml.load(msg)
-        # TODO: check msg_type
+        self._check_loaded_msg(parsed_yaml, allowed_types)
         return parsed_yaml
 
     def _try_read_subprocess_error(self):
@@ -231,7 +269,7 @@ class DAPPClient(DAPPCommunicator):
         """A shortcut to send "finished" message."""
         self.send_msg(msg_type='finished', ctxt=ctxt, data={'lres': lres, 'res':res})
 
-    def recv_msg(self):
+    def recv_msg(self, allowed_types=None):
         lines = []
         line = ''
         while line != 'STOP':
@@ -244,7 +282,7 @@ class DAPPClient(DAPPCommunicator):
             return None
 
         parsed_yaml = yaml.load(msg)
-        # TODO: check msg_type
+        self._check_loaded_msg(parsed_yaml, allowed_types)
         return parsed_yaml
 
     def pingpong(self):
@@ -259,17 +297,11 @@ class DAPPClient(DAPPCommunicator):
         If an error occurs, a "fail" message with "fail_desc" is sent and sys.exit(1) is called.
         """
         # wait for "run" message
-        msg = self.recv_msg()
+        try:
+            msg = self.recv_msg(allowed_types=['run'])
+        except DAPPException as e:
+            self.send_msg_fail(ctxt=None, fail_desc=str(e))
         fail_desc = None
-        # for now, let's be very strict about the protocol version
-        server_pv = msg.get('dapp_protocol_version', 'none')
-        msg_type = msg.get('msg_type', 'none')
-        if server_pv != self.protocol_version:
-            fail_desc = 'PingPong client needs protocol version "{cv}", but server sent {sv}'.\
-                format(cv=self.protocol_version, sv=server_pv)
-        if msg['msg_type'] != 'run':
-            fail_desc = 'PingPong client expected "msg_type" to be "run" message, got "{m}"'.\
-                format(m=msg['msg_type'])
         if fail_desc is not None:
             self.send_msg_fail(ctxt, fail_desc)
             sys.exit(1)
@@ -281,6 +313,7 @@ class DAPPClient(DAPPCommunicator):
         except BaseException as e:
             fail_desc = 'PingPong run method ended with an exception:\n{e}'.format(e)
             self.send_msg_fail(ctxt, fail_desc)
+            sys.exit(1)
 
         if not isinstance(run_result, tuple) or len(run_result) != 2:
             fail_desc = ['PingPong run method ended with unexpected result:',
@@ -306,7 +339,9 @@ class DAPPClient(DAPPCommunicator):
         """
         self.send_msg(msg_type='call_command', ctxt=ctxt,
             data={'command_type': command_type, 'command_input': command_input})
-        response = self.recv_msg()
+        # if an exception is raised here, let it bubble up so that the calling method can
+        #  deal with it as it wishes
+        response = self.recv_msg(allowed_types=['command_result'])
         # we can't use ctxt.update(response['ctxt']), because the command might have
         #  also deleted some variables from the context
         for k, v in response['ctxt'].items():
