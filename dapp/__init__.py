@@ -273,10 +273,14 @@ class DAPPClient(DAPPCommunicator):
             logger=None):
         super(DAPPClient, self).__init__(protocol_version, logger)
         # we want to write bytes in Python 3, so we use buffer for sys.stdin and sys.stdout
-        stdin = sys.stdin if six.PY2 else sys.stdin.buffer
-        stdout = sys.stdout if six.PY2 else sys.stdout.buffer
-        self.listen_fd = listen_fd or stdin
-        self.write_fd = write_fd or stdout
+        if listen_fd:
+            self.listen_fd = listen_fd
+        else:
+            self.listen_fd = sys.stdin if six.PY2 else sys.stdin.buffer
+        if write_fd:
+            self.write_fd = write_fd
+        else:
+            self.write_fd = sys.stdout if six.PY2 else sys.stdout.buffer
 
     def send_msg(self, msg_type, ctxt=None, data=None):
         # TODO: minor code duplication with the method in DAPPServer, maybe refactor
@@ -328,6 +332,7 @@ class DAPPClient(DAPPCommunicator):
             msg = self.recv_msg(allowed_types=['run'])
         except DAPPException as e:
             self.send_msg_failed(ctxt=None, fail_desc=str(e))
+            sys.exit(1)
         fail_desc = None
         if fail_desc is not None:
             self.send_msg_failed(ctxt, fail_desc)
@@ -378,7 +383,7 @@ class DAPPClient(DAPPCommunicator):
                 format(ct=command_type))
         elif response['msg_type'] == 'command_exception':
             raise DAPPCommandException('DevAssistant command raised exception:\n"{e}"'.\
-                format(e=response['exception']))
+                format(e=response.get('exception', 'No exception message.')))
         # we can't use ctxt.update(response['ctxt']), because the command might have
         #  also deleted some variables from the context
         update_ctxt(ctxt, response['ctxt'])

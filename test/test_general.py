@@ -9,11 +9,16 @@ class TestUpdateCtxt(object):
         ({'a': 'a', 'b': 'b'}, {}),
         ({'a': 'a'}, {'b': 'b'}),
         ({}, {'a': 'a', 'b': 'b'}),
-        ({'a': 'a'}, {'a': 'aa', 'b': 'bb'})
+        ({'a': 'a'}, {'a': 'aa', 'b': 'bb'}),
     ])
     def test_update_ctxt(self, old, new):
         update_ctxt(old, new)
         assert old == new
+
+    def test_update_ctxt_ignores_assistant(self):
+        old = {'__assistant__': ''}
+        update_ctxt(old, {})
+        assert old == {'__assistant__': ''}
 
 class TestDAPPCommunicator(object):
     def setup_method(self, method):
