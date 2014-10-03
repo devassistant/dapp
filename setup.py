@@ -79,7 +79,7 @@ setup(
     author='Bohuslav "Slavek" Kabrda',
     author_email='bkabrda@redhat.com',
     license='GPLv2+',
-    packages=find_packages(),
+    packages=find_packages(exclude=['test']),
     install_requires=['PyYAML'],
     classifiers=[
         'Development Status :: 3 - Alpha',

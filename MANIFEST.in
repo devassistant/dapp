@@ -1,2 +1,5 @@
 include README.rst
 include LICENSE
+
+recursive-include test *.py
+recursive-exclude . __pycache__
