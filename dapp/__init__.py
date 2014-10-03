@@ -107,7 +107,7 @@ class DAPPCommunicator(object):
         # all parts of message should be unencoded at this point
         return '\n'.join(msg).encode('utf8')
 
-    def _message_from_start_stop_list(self, lst):
+    def _msg_from_start_stop_list(self, lst):
         """Check a list of lines of received message and return a string without
         "START" and "STOP" and possibly empty lines in the beginning and end.
 
@@ -187,7 +187,7 @@ class DAPPCommunicator(object):
         if 'msg_type' not in msg:
             raise DAPPException('PingPong message doesn\'t contain "msg_type".')
         if 'ctxt' not in msg:
-            raise DAPPException('PingPong message doesn\'t containe "ctxt".')
+            raise DAPPException('PingPong message doesn\'t contain "ctxt".')
         if allowed_types is not None and msg['msg_type'] not in allowed_types:
             raise DAPPBadMsgType('Expected one of "{at}" message types, got "{mt}".'.\
                 format(at=', '.join(allowed_types), mt=msg['msg_type']))
@@ -250,7 +250,7 @@ class DAPPServer(DAPPCommunicator):
         # TODO: this sometimes seems to omit some lines from the message - find out why
         self.log(logging.DEBUG,
             'Got message from PingPong subprocess:\n{0}'.format('\n'.join(lines)))
-        msg = self._message_from_start_stop_list(lines)
+        msg = self._msg_from_start_stop_list(lines)
         if msg is None:
             return None
 
@@ -304,7 +304,7 @@ class DAPPClient(DAPPCommunicator):
             line = self.listen_fd.readline().decode('utf8')[:-1]
             lines.append(line)
 
-        msg = self._message_from_start_stop_list(lines)
+        msg = self._msg_from_start_stop_list(lines)
         if msg is None:
             return None
 
