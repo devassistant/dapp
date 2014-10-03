@@ -6,6 +6,7 @@ import six
 import yaml
 
 __version__ = "0.0.1"
+protocol_version = "1.0.0"
 
 class DAPPException(BaseException):
     pass
@@ -38,7 +39,7 @@ def update_ctxt(old, new):
             old[k] = new[k]
 
 class DAPPCommunicator(object):
-    def __init__(self, protocol_version=__version__, logger=None):
+    def __init__(self, protocol_version=protocol_version, logger=None):
         self.protocol_version = protocol_version
         self.logger=logger
 
@@ -199,7 +200,7 @@ class DAPPCommunicator(object):
 
 
 class DAPPServer(DAPPCommunicator):
-    def __init__(self, proc, protocol_version=__version__, logger=None):
+    def __init__(self, proc, protocol_version=protocol_version, logger=None):
         super(DAPPServer, self).__init__(protocol_version, logger)
         self.proc = proc
 
@@ -266,7 +267,8 @@ class DAPPServer(DAPPCommunicator):
 
 
 class DAPPClient(DAPPCommunicator):
-    def __init__(self, listen_fd=None, write_fd=None, protocol_version=__version__, logger=None):
+    def __init__(self, listen_fd=None, write_fd=None, protocol_version=protocol_version,
+            logger=None):
         super(DAPPClient, self).__init__(protocol_version, logger)
         # we want to write bytes in Python 3, so we use buffer for sys.stdin and sys.stdout
         stdin = sys.stdin if six.PY2 else sys.stdin.buffer
