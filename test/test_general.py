@@ -45,7 +45,7 @@ class TestDAPPCommunicator(object):
         assert set(msg.splitlines()) == expected_lines
 
     @pytest.mark.parametrize('lst, res_from, res_to', [
-        (['', 'START', 'dapp_protocol_version: 1.0.0', 'ctxt', '  foo: bar',
+        (['', 'START', 'dapp_protocol_version: 1', 'ctxt', '  foo: bar',
           'spam: spam', 'STOP', ''], 2, -2),
         (['', ''], -1, -1)
     ])
