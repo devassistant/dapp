@@ -1,8 +1,8 @@
 DevAssistant PingPong
 =====================
 
-Library implementing protocol used for communication between DevAssistant and executable
-assistants. The protocol specification can be found at TODO:link.
+Library implementing protocol used for communication between DevAssistant and PingPong
+scripts (a.k.a. executable assistants). The protocol specification can be found at TODO:link.
 
 Note that this library implements both "server" and "client" side. The "server" side
 is only used by DevAssistant itself. If you're considering implementing a DevAssistant
@@ -11,15 +11,15 @@ PingPong library for another language, you just need to implement the "client" s
 Usage
 -----
 
-To write a simple executable assistant, you need to create a minimal Yaml assistant,
-that specifies metadata, dependencies needed to run the executable assistant (which
+To write a simple PingPong script, you need to create a minimal Yaml assistant,
+that specifies metadata, dependencies needed to run the PingPong script (which
 is a Python 3 script in this case)::
 
-  fullname: PingPong assistant
-  description: A simple executable assistant using DevAssistant PingPong protocol
+  fullname: PingPong script example
+  description: A simple PingPong script using DevAssistant PingPong protocol
 
   dependencies:
-  # TODO: once this library is on PyPI/packaged in Fedora, it should also be added to list of deps
+  # TODO: once dapp library is on PyPI/packaged in Fedora, it should also be added to list of deps
   - rpm: [python3]
 
   args:
@@ -34,14 +34,14 @@ is a Python 3 script in this case)::
   run:
   - pingpong: python3 *script
 
-Let's assume that the above script is ``~/.devassistant/assistants/crt/test.yaml``. The
-corresponding executable assistant has to be ``~/.devassistant/files/crt/test/script.py``
+Let's assume that the above assistant is ``~/.devassistant/assistants/crt/test.yaml``. The
+corresponding PingPong script has to be ``~/.devassistant/files/crt/test/script.py``
 and can look like this::
 
   #!/usr/bin/python3
   import dapp
 
-  class MyAssistant(dapp.DAPPClient):
+  class MyScript(dapp.DAPPClient):
       def run(self, ctxt):
           if 'name' in ctxt:
               name = ctxt['name'].capitalize()
@@ -51,15 +51,15 @@ and can look like this::
           return (True, 'I greeted him!')
 
   if __name__ == '__main__':
-      MyAssistant().pingpong()
+      MyScript().pingpong()
 
 Things to Note
 --------------
 
-- The executable assistant has to subclass ``dapp.DAPPClient``.
+- The PingPong script class has to subclass ``dapp.DAPPClient``.
 - The ``run`` method has to accept two arguments, ``self`` (Python specific argument pointing to
   the object) and ``ctxt``. The ``ctxt`` is a dict (Python mapping type) that holds the global context
-  of the Yaml DSL (e.g. it contains the ``name`` argument, if it was specificed by user on command
+  of the Yaml DSL (e.g. it contains the ``name`` argument, if it was specified by user on command
   line/in GUI).
 - You can utilize DevAssistant commands [1] by calling ``call_command`` method. This takes three
   arguments - *command type*, *command input* and global context. The first two are the same as
@@ -73,6 +73,8 @@ Things to Note
 - If you want the assistant to modify the global context, just modify the ``ctxt`` variable.
   All commands that you possibly run after ``pingpong`` in the Yaml file will then see all
   the modifications that you did.
+- Note, that to actually start the PingPong script, you have to call ``pingpong()`` method
+  of the script class, **not** the ``run()`` method.
 
 
 [1] http://docs.devassistant.org/en/latest/developer_documentation/command_reference.html

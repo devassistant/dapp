@@ -200,6 +200,7 @@ class DAPPCommunicator(object):
 
 
 class DAPPServer(DAPPCommunicator):
+    """Class implementing server side of the PingPong protocol."""
     def __init__(self, proc, protocol_version=protocol_version, logger=None):
         super(DAPPServer, self).__init__(protocol_version, logger)
         self.proc = proc
@@ -267,6 +268,7 @@ class DAPPServer(DAPPCommunicator):
 
 
 class DAPPClient(DAPPCommunicator):
+    """Class implementing client side of the PingPong protocol."""
     def __init__(self, listen_fd=None, write_fd=None, protocol_version=protocol_version,
             logger=None):
         super(DAPPClient, self).__init__(protocol_version, logger)
@@ -316,7 +318,7 @@ class DAPPClient(DAPPCommunicator):
         The flow:
         1) wait for DevAssistant to send a message of type "run"
         2) call the "run" method (this is supposed to be subclassed in the actual
-           executable assistants)
+           PingPong scripts)
         3) sends a message of type "finished" with result of the execution
 
         If an error occurs, a "fail" message with "fail_desc" is sent and sys.exit(1) is called.
