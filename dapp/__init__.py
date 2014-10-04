@@ -212,7 +212,7 @@ class DAPPServer(DAPPCommunicator):
         if data:
             send_msg.update(data)
         msg = self._compose_msg(ctxt, data=send_msg)
-        self.log(logging.DEBUG, 'Sending message to PingPong subprocess:\n' + msg)
+        self.log(logging.DEBUG, 'Sending message to PingPong subprocess:\n' + msg.decode('utf8'))
         try:
             self.proc.stdin.write(msg)
             self.proc.stdin.flush()
