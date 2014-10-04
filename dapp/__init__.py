@@ -5,7 +5,7 @@ import sys
 import six
 import yaml
 
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 protocol_version = "1"
 
 class DAPPException(BaseException):
