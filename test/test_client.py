@@ -13,27 +13,13 @@ class MyClient(DAPPClient):
 
 
 class TestClient(CommunicatorTestCase):
+    """Some test methods for this class are inherited from CommunicatorTestCase,
+    since they're common for both server and client.
+    """
     def setup_method(self, method):
         self.lfd = six.BytesIO()
         self.wfd = six.BytesIO()
         self.c = MyClient(listen_fd=self.lfd, write_fd=self.wfd)
-
-    def test_send_msg(self):
-        self.c.send_msg('type', ctxt={'foo': 'bar'}, data={'spam': 'spam'})
-        msg = self._read_sent_msg()
-        assert set(msg.splitlines()) == set(self.some_msg_lines)
-
-    def test_recv_msg(self):
-        self._write_msg(self.some_msg_lines)
-        msg = self.c.recv_msg()
-        assert msg == self.some_msg_dict
-
-    def test_recv_msg_wrong_type(self):
-        # we don't test various malformed messages here; they're checked
-        #  by test_check_loaded_msg in test_general
-        self._write_msg(self.some_msg_lines)
-        with pytest.raises(DAPPBadMsgType):
-            self.c.recv_msg(allowed_types=['foo'])
 
     def test_call_command_no_such_command(self):
         self._write_msg(self.s_no_such_cmd_msg_lines)

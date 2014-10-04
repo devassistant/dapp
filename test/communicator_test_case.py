@@ -1,4 +1,6 @@
-from dapp import protocol_version
+import pytest
+
+from dapp import protocol_version, DAPPBadMsgType
 
 class CommunicatorTestCase(object):
     # a custom message that can be sent by either client or server
@@ -37,7 +39,6 @@ class CommunicatorTestCase(object):
     c_ok_msg_dict = {'ctxt': {'foo': 'bar', 'spam': 'spam'}, 'msg_type': 'finished',
         'lres': True, 'res': 'success', 'dapp_protocol_version': str(protocol_version)}
 
-
     def _read_sent_msg(self, from_pos=0, nbytes=-1):
         where = self.wfd.tell()
         self.wfd.seek(from_pos)
@@ -58,3 +59,20 @@ class CommunicatorTestCase(object):
             self.lfd.seek(0, 0)
         else:  # end
             self.lfd.seek(0, 2)
+
+    def test_send_msg(self):
+        self.c.send_msg('type', ctxt={'foo': 'bar'}, data={'spam': 'spam'})
+        msg = self._read_sent_msg()
+        assert set(msg.splitlines()) == set(self.some_msg_lines)
+        
+    def test_recv_msg(self):
+        self._write_msg(self.some_msg_lines)
+        msg = self.c.recv_msg()
+        assert msg == self.some_msg_dict
+
+    def test_recv_msg_wrong_type(self):
+        # we don't test various malformed messages here; they're checked
+        #  by test_check_loaded_msg in test_general
+        self._write_msg(self.some_msg_lines)
+        with pytest.raises(DAPPBadMsgType):
+            self.c.recv_msg(allowed_types=['foo'])

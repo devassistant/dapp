@@ -10,14 +10,15 @@ class MockProcess(object):
         self.stdin = six.BytesIO()
         self.stdout = six.BytesIO()
 
+    def poll(self):
+        return None
+
 class TestServer(CommunicatorTestCase):
+    """Some test methods for this class are inherited from CommunicatorTestCase,
+    since they're common for both server and client.
+    """
     def setup_method(self, method):
         proc = MockProcess()
         self.wfd = proc.stdin
         self.lfd = proc.stdout
-        self.s = DAPPServer(proc=proc)
-
-    def test_send_msg(self):
-        self.s.send_msg('type', ctxt={'foo': 'bar'}, data={'spam': 'spam'})
-        msg = self._read_sent_msg()
-        assert set(msg.splitlines()) == set(self.some_msg_lines)
+        self.c = DAPPServer(proc=proc)
