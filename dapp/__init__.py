@@ -200,7 +200,10 @@ class DAPPCommunicator(object):
 
 
 class DAPPServer(DAPPCommunicator):
-    """Class implementing server side of the PingPong protocol."""
+    """Class implementing server side of the PingPong protocol.
+    Note: unlike DAPPClient, this class doesn't implement any sort of pingpong or run
+    method, it's supposed to be used "as a library" on the DevAssistant side.
+    """
     def __init__(self, proc, protocol_version=protocol_version, logger=None):
         super(DAPPServer, self).__init__(protocol_version, logger)
         self.proc = proc
