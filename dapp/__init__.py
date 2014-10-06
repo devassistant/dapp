@@ -390,9 +390,6 @@ class DAPPClient(DAPPCommunicator):
             self.send_msg_failed(ctxt=None, fail_desc=str(e))
             sys.exit(1)
         fail_desc = None
-        if fail_desc is not None:
-            self.send_msg_failed(ctxt, fail_desc)
-            sys.exit(1)
 
         # actually run
         ctxt = msg.get('ctxt', {})
