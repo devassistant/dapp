@@ -50,12 +50,13 @@ class TestClient(CommunicatorTestCase):
         self._write_msg(self.s_cmd_ok_msg_lines, seek='end', msg_number=3)
         self._write_msg_received(seek='start', msg_number=4)
         self.c.pingpong()
-        
+
         msgs = self._read_sent_msg().split(b'STOP\nSTART')
         confirm1 = msgs[0][len('START\n'):]
         call_msg = msgs[1]
         confirm3 = msgs[2]
         ok_msg = msgs[3][:-len('STOP\n')]
+
         self.assert_msg_dict(self.msg_received_dict, yaml.load(confirm1), msg_number=1)
         self.assert_msg_dict(self.c_call_msg_dict, yaml.load(call_msg), msg_number=2)
         self.assert_msg_dict(self.msg_received_dict, yaml.load(confirm3), msg_number=3)

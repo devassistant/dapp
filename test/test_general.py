@@ -37,7 +37,7 @@ class TestDAPPCommunicator(object):
         ({'msg_type': 'present', 'ctxt': {}, 'but no': 'msg_type'}, None, DAPPException),
         ({'msg_type': 'present', 'but no': 'ctxt', 'msg_number': 1}, None, DAPPException),
         ({'msg_type': 'foo', 'ctxt': {}, 'msg_number': 1}, ['bar'], DAPPBadMsgType),
-        ({'msg_type': 'foo', 'ctxt': {}, 'dapp_protocol_version': 'foo', 'msg_number': 1}, None,
+        ({'msg_type': 'foo', 'ctxt': {}, 'dapp_protocol_version': 0, 'msg_number': 1}, None,
             DAPPBadProtocolVersion),
         # this is actually ok, since 'msg_received' shouldn't contain 'ctxt'
         ({'msg_type': 'msg_received', 'dapp_protocol_version': protocol_version, 'msg_number': 1},
@@ -53,7 +53,7 @@ class TestDAPPCommunicator(object):
     def test_compose_msg(self):
         msg = self.dc._compose_msg(ctxt={'foo': 'bar'}, data={'spam': 'spam'})
         expected_lines = set([b'START', b'STOP', b'ctxt:', b'  foo: bar', b'spam: spam',
-            b'dapp_protocol_version: "' + protocol_version.encode('utf8') + b'"'])
+            'dapp_protocol_version: {0}'.format(protocol_version).encode('utf8')])
         assert set(msg.splitlines()) == expected_lines
 
     @pytest.mark.parametrize('lst, res_from, res_to', [

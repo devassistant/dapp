@@ -6,7 +6,7 @@ import six
 import yaml
 
 __version__ = "0.2.0.dev1"
-protocol_version = "2"
+protocol_version = 2
 
 class DAPPException(BaseException):
     pass
@@ -114,7 +114,7 @@ class DAPPCommunicator(object):
             utf8 encoded message that can be sent through the pipe
         """
         msg = ['START']
-        msg.append('dapp_protocol_version: "{v}"'.format(v=self.protocol_version))
+        msg.append('dapp_protocol_version: {v}'.format(v=self.protocol_version))
         if ctxt is not None:
             msg.append(self._dump_ctxt(ctxt).strip())
         if data is not None:
@@ -214,9 +214,9 @@ class DAPPCommunicator(object):
             raise DAPPBadMsgType('Expected one of "{at}" message types, got "{mt}".'.\
                 format(at=', '.join(allowed_types), mt=msg['msg_type']))
         # for now, let's be very strict about the protocol version
-        other_pv = msg.get('dapp_protocol_version', 'none')
+        other_pv = msg.get('dapp_protocol_version', 'no version')
         if other_pv != self.protocol_version:
-            err = 'PingPong client needs protocol version "{sv}", but server sent "{ov}"'.\
+            err = 'PingPong client needs protocol version "{sv}", but the other side sent "{ov}"'.\
                 format(sv=self.protocol_version, ov=other_pv)
             raise DAPPBadProtocolVersion(err)
 
@@ -333,6 +333,8 @@ class DAPPClient(DAPPCommunicator):
             line = self.listen_fd.readline().decode('utf8')[:-1]
             lines.append(line)
 
+        self.log(logging.DEBUG,
+            'Got message from PingPong subprocess:\n{0}'.format('\n'.join(lines)))
         msg = self._msg_from_start_stop_list(lines)
         if msg is None:
             return None

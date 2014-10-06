@@ -5,42 +5,36 @@ import pytest
 from dapp import protocol_version, DAPPBadMsgType
 
 class CommunicatorTestCase(object):
+    pv = 'dapp_protocol_version: {0}'.format(protocol_version).encode('utf8')
     # a general confirmation message
-    msg_received_lines = [b'START', b'msg_type: msg_received',
-        b'dapp_protocol_version: "' + protocol_version.encode('utf8') + b'"', b'STOP']
+    msg_received_lines = [b'START', b'msg_type: msg_received', pv, b'STOP']
     msg_received_dict = {'msg_type': 'msg_received', 'dapp_protocol_version': protocol_version}
 
     # a custom message that can be sent by either client or server
-    some_msg_lines = [b'START', b'ctxt:', b'  foo: bar', b'spam: spam',
-        b'dapp_protocol_version: "' + protocol_version.encode('utf8') + b'"',
+    some_msg_lines = [b'START', b'ctxt:', b'  foo: bar', b'spam: spam', pv,
         b'msg_type: type', b'STOP']
     some_msg_dict = {'ctxt': {'foo': 'bar'}, 'spam': 'spam', 'msg_type': 'type',
         'dapp_protocol_version': protocol_version}
 
     # client calling a command
-    c_call_msg_lines = [b'START', b'ctxt:', b'  spam: spam', b'msg_type: call_command',
-        b'dapp_protocol_version: "' + protocol_version.encode('utf8') + b'"',
+    c_call_msg_lines = [b'START', b'ctxt:', b'  spam: spam', b'msg_type: call_command', pv,
         b'command_type: foo', b'command_input: bar', b'STOP']
     c_call_msg_dict = {'ctxt': {'spam': 'spam'}, 'msg_type': 'call_command',
         'command_type': 'foo', 'command_input': 'bar',
         'dapp_protocol_version': protocol_version}
 
     # the 3 below are various responses to c_call_msg_lines
-    s_no_such_cmd_msg_lines = [b'START', b'ctxt:', b'  foo: bar',
-        b'dapp_protocol_version: "' + protocol_version.encode('utf8') + b'"',
+    s_no_such_cmd_msg_lines = [b'START', b'ctxt:', b'  foo: bar', pv,
         b'msg_type: no_such_command', b'STOP']
 
-    s_cmd_exc_msg_lines = [b'START', b'ctxt:', b'  foo: bar',
-        b'dapp_protocol_version: "' + protocol_version.encode('utf8') + b'"',
+    s_cmd_exc_msg_lines = [b'START', b'ctxt:', b'  foo: bar', pv,
         b'msg_type: command_exception', b'exception: problem', b'STOP']
 
-    s_cmd_ok_msg_lines =  [b'START', b'ctxt:', b'  spam: spam', b'  foo: bar',
-        b'dapp_protocol_version: "' + protocol_version.encode('utf8') + b'"',
+    s_cmd_ok_msg_lines =  [b'START', b'ctxt:', b'  spam: spam', b'  foo: bar', pv,
         b'msg_type: command_result', b'lres: True', b'res: result', b'STOP']
 
     # server telling client to start
-    s_run_msg_lines = [b'START', b'ctxt:', b'  spam: spam', b'msg_type: run',
-        b'dapp_protocol_version: "' + protocol_version.encode('utf8') + b'"', b'STOP']
+    s_run_msg_lines = [b'START', b'ctxt:', b'  spam: spam', b'msg_type: run', pv, b'STOP']
 
     # client saying that it finished successfully
     c_ok_msg_dict = {'ctxt': {'foo': 'bar', 'spam': 'spam'}, 'msg_type': 'finished',
