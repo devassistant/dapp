@@ -2,6 +2,7 @@
 import logging
 import signal
 import sys
+import traceback
 
 import six
 import yaml
@@ -271,7 +272,8 @@ class DAPPServer(DAPPCommunicator):
             self.proc.stdin.write(msg)
             self.proc.stdin.flush()
         except IOError as e:
-            msg = 'Error writing data to PingPong subprocess: {0}\n'.format(e)
+            msg = 'Error writing data to PingPong subprocess: {e}\n'.\
+                format(e=format_exc())
             out = self._try_read_subprocess_error()
             if out:
                 msg += 'Subprocess output:\n' + out
@@ -387,7 +389,7 @@ class DAPPClient(DAPPCommunicator):
         try:
             msg = self.recv_msg(allowed_types=['run'])
         except DAPPException as e:
-            self.send_msg_failed(ctxt=None, fail_desc=str(e))
+            self.send_msg_failed(ctxt=None, fail_desc=traceback.format_exc())
             sys.exit(1)
         fail_desc = None
 
@@ -396,7 +398,8 @@ class DAPPClient(DAPPCommunicator):
         try:
             run_result = self.run(ctxt)
         except BaseException as e:
-            fail_desc = 'PingPong run method ended with an exception:\n{e}'.format(e=e)
+            fail_desc = 'PingPong run method ended with an exception:\n{e}'.\
+                format(e=traceback.format_exc())
             self.send_msg_failed(ctxt, fail_desc)
             sys.exit(1)
 
