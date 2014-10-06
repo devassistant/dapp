@@ -6,7 +6,7 @@ import sys
 import six
 import yaml
 
-__version__ = "0.2.0.dev1"
+__version__ = "0.2.0"
 protocol_version = 2
 
 # time to wait for msg_received
