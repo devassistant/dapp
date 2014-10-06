@@ -70,7 +70,7 @@ class PyTest(Command):
 
 setup(
     name='dapp',
-    version='0.2.0',
+    version='0.2.1',
     description='Library implementing DevAssistant PingPong protocol',
     long_description=''.join(open('README.rst').readlines()),
     keywords='devassistant,pipe,protocol,pingpong',

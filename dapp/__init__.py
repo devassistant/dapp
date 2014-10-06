@@ -7,7 +7,7 @@ import traceback
 import six
 import yaml
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 protocol_version = 2
 
 # time to wait for msg_received
@@ -407,7 +407,7 @@ class DAPPClient(DAPPCommunicator):
             fail_desc = ['PingPong run method ended with unexpected result:',
                 str(run_result),
                 '(expected 2-tuple)']
-            self.send_msg_failed(ctxt, fail_desc)
+            self.send_msg_failed(ctxt, ' '.join(fail_desc))
             sys.exit(1)
 
         # send "finished" message to DevAssistant
