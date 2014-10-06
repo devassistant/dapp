@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+import signal
 import sys
 
 import six
@@ -8,26 +9,39 @@ import yaml
 __version__ = "0.2.0.dev1"
 protocol_version = 2
 
+# time to wait for msg_received
+msg_received_timeout = 5
+
+
 class DAPPException(BaseException):
     pass
+
 
 class DAPPBadMsgType(DAPPException):
     pass
 
+
 class DAPPBadProtocolVersion(DAPPException):
     pass
+
 
 class DAPPNoSuchCommand(DAPPException):
     pass
 
+
 class DAPPCommandException(DAPPException):
     pass
+
 
 class DAPPBadMsgConfirmation(DAPPException):
     pass
 
-ctxt_ignore = ['__assistant__']
 
+class DAPPTimeOut(DAPPException):
+    pass
+
+
+ctxt_ignore = ['__assistant__']
 def update_ctxt(old, new):
     """This method works much like dict.update, but it also deletes keys from old dict
     that are not in new dict.
@@ -40,6 +54,19 @@ def update_ctxt(old, new):
             del old[k]
         else:
             old[k] = new[k]
+
+
+def timeout_func(seconds, err_msg, function, *args, **kwargs):
+    def raise_err(signum, frame):
+        raise DAPPTimeOut(err_msg)
+    prev_handler = signal.signal(signal.SIGALRM, raise_err)
+    signal.alarm(seconds)
+    try:
+        result = function(*args, **kwargs)
+    finally:
+        signal.signal(signal.SIGALRM, prev_handler)
+    return result
+
 
 class DAPPCommunicator(object):
     def __init__(self, protocol_version=protocol_version, logger=None):
@@ -63,14 +90,13 @@ class DAPPCommunicator(object):
         data = data or {}
         data['msg_number'] = self.last_msg_number
         self._send_msg(msg_type, ctxt, data)
-        # TODO: timeout
-        msg = self.recv_msg(allowed_types=['msg_received'])
+        msg = self.recv_msg(allowed_types=['msg_received'], timeout=msg_received_timeout)
         if msg['msg_number'] != self.last_msg_number:
             err = 'Expected confirmation for message {0}, got for message {1}.'.\
                 format(self.last_msg_number, msg['msg_number'])
             raise DAPPBadMsgConfirmation(err)
 
-    def recv_msg(self, allowed_types=None):
+    def recv_msg(self, allowed_types=None, timeout=0):
         """Receive a message to the other communicating side through the pipe; send a confirmation
         that this message was received (unless the received message itself is a confirmation).
 
@@ -78,6 +104,7 @@ class DAPPCommunicator(object):
             allowed_types: list of allowed types or None; if None is specified, then any message
                 type is accepted; if a list of types is specified and message type is not in
                 the list, DAPPBadMsgType is raised
+            timeout: default timeout for receiving a message; if 0, there is no timeout
 
         Return:
             dict of decoded data sent through the pipe by the other side
@@ -88,7 +115,9 @@ class DAPPCommunicator(object):
             DAPPBadMsgType if msg_type is not in allowed_types and allowed_types is not None
             DAPPBadProtocolVersion if sent message has unsupported protocol version
         """
-        msg = self._recv_msg(allowed_types=allowed_types)
+        msg = timeout_func(timeout, 'Receiving PingPong message confirmation timed out.',
+            self._recv_msg, allowed_types=allowed_types)
+
         self.last_msg_number = int(msg['msg_number'])
         if msg['msg_type'] != 'msg_received':
             self._send_msg('msg_received', None, {'msg_number': self.last_msg_number})

@@ -2,7 +2,7 @@ import copy
 
 import pytest
 
-from dapp import protocol_version, DAPPBadMsgType
+from dapp import protocol_version, DAPPBadMsgType, DAPPTimeOut
 
 class CommunicatorTestCase(object):
     pv = 'dapp_protocol_version: {0}'.format(protocol_version).encode('utf8')
@@ -90,3 +90,7 @@ class CommunicatorTestCase(object):
         self._write_msg(self.some_msg_lines)
         with pytest.raises(DAPPBadMsgType):
             self.c.recv_msg(allowed_types=['foo'])
+
+    def test_recv_msg_timeout(self):
+        with pytest.raises(DAPPTimeOut):
+            self.c.recv_msg(timeout=1)
