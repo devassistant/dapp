@@ -34,13 +34,20 @@ class TestDAPPCommunicator(object):
     @pytest.mark.parametrize('msg, allowed_types, exctype', [
         ('not a mapping', None, DAPPException),
         ({'no_msg_type': 'foo'}, None, DAPPException),
-        ({'msg_type': 'present', 'but no': 'ctxt'}, None, DAPPException),
-        ({'msg_type': 'foo', 'ctxt': {}}, ['bar'], DAPPBadMsgType),
-        ({'msg_type': 'foo', 'ctxt': {}, 'dapp_protocol_version': 'foo'}, None,
+        ({'msg_type': 'present', 'ctxt': {}, 'but no': 'msg_type'}, None, DAPPException),
+        ({'msg_type': 'present', 'but no': 'ctxt', 'msg_number': 1}, None, DAPPException),
+        ({'msg_type': 'foo', 'ctxt': {}, 'msg_number': 1}, ['bar'], DAPPBadMsgType),
+        ({'msg_type': 'foo', 'ctxt': {}, 'dapp_protocol_version': 'foo', 'msg_number': 1}, None,
             DAPPBadProtocolVersion),
+        # this is actually ok, since 'msg_received' shouldn't contain 'ctxt'
+        ({'msg_type': 'msg_received', 'dapp_protocol_version': protocol_version, 'msg_number': 1},
+            None, None)
     ])
     def test_check_loaded_msg(self, msg, allowed_types, exctype):
-        with pytest.raises(exctype):
+        if exctype:
+            with pytest.raises(exctype):
+                self.dc._check_loaded_msg(msg, allowed_types)
+        else:
             self.dc._check_loaded_msg(msg, allowed_types)
 
     def test_compose_msg(self):

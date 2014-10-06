@@ -6,7 +6,7 @@ import six
 import yaml
 
 __version__ = "0.2.0.dev1"
-protocol_version = "1"
+protocol_version = "2"
 
 class DAPPException(BaseException):
     pass
@@ -21,6 +21,9 @@ class DAPPNoSuchCommand(DAPPException):
     pass
 
 class DAPPCommandException(DAPPException):
+    pass
+
+class DAPPBadMsgConfirmation(DAPPException):
     pass
 
 ctxt_ignore = ['__assistant__']
@@ -42,9 +45,11 @@ class DAPPCommunicator(object):
     def __init__(self, protocol_version=protocol_version, logger=None):
         self.protocol_version = protocol_version
         self.logger=logger
+        self.last_msg_number = 0
 
     def send_msg(self, msg_type, ctxt, data=None):
-        """Send a message to the other communicating side through the pipe.
+        """Send a message to the other communicating side through the pipe and
+        receive confirmation message.
 
         Args:
             ctxt: global variable context from Yaml DSL
@@ -54,10 +59,20 @@ class DAPPCommunicator(object):
         Raises:
             DAPPException if something goes wrong while message is being sent
         """
-        raise NotImplementedError()
+        self.last_msg_number += 1
+        data = data or {}
+        data['msg_number'] = self.last_msg_number
+        self._send_msg(msg_type, ctxt, data)
+        # TODO: timeout
+        msg = self.recv_msg(allowed_types=['msg_received'])
+        if msg['msg_number'] != self.last_msg_number:
+            err = 'Expected confirmation for message {0}, got for message {1}.'.\
+                format(self.last_msg_number, msg['msg_number'])
+            raise DAPPBadMsgConfirmation(err)
 
     def recv_msg(self, allowed_types=None):
-        """Receive a message to the other communicating side through the pipe.
+        """Receive a message to the other communicating side through the pipe; send a confirmation
+        that this message was received (unless the received message itself is a confirmation).
 
         Args:
             allowed_types: list of allowed types or None; if None is specified, then any message
@@ -73,7 +88,11 @@ class DAPPCommunicator(object):
             DAPPBadMsgType if msg_type is not in allowed_types and allowed_types is not None
             DAPPBadProtocolVersion if sent message has unsupported protocol version
         """
-        raise NotImplementedError()
+        msg = self._recv_msg(allowed_types=allowed_types)
+        self.last_msg_number = int(msg['msg_number'])
+        if msg['msg_type'] != 'msg_received':
+            self._send_msg('msg_received', None, {'msg_number': self.last_msg_number})
+        return msg
 
     def log(self, level, msg):
         """Log a message at given level, assuming self.logger is set,
@@ -178,7 +197,8 @@ class DAPPCommunicator(object):
         protocol version.
 
         Raises:
-            DAPPException if the message is not a dict or does not contain "msg_type" or "ctxt"
+            DAPPException if the message is not a dict or doesn't contain "msg_type" or
+                message type isn't "msg_received" and message doesn't contain "ctxt"
             DAPPBadMsgType if msg_type is not in allowed_types and allowed_types is not None
             DAPPBadProtocolVersion if sent message has unsupported protocol version
         """
@@ -186,7 +206,9 @@ class DAPPCommunicator(object):
             raise DAPPException('PingPong message not a mapping.')
         if 'msg_type' not in msg:
             raise DAPPException('PingPong message doesn\'t contain "msg_type".')
-        if 'ctxt' not in msg:
+        if 'msg_number' not in msg:
+            raise DAPPException('PingPong message doesn\'t contain "msg_number".')
+        if msg['msg_type'] != 'msg_received' and 'ctxt' not in msg:
             raise DAPPException('PingPong message doesn\'t contain "ctxt".')
         if allowed_types is not None and msg['msg_type'] not in allowed_types:
             raise DAPPBadMsgType('Expected one of "{at}" message types, got "{mt}".'.\
@@ -208,7 +230,7 @@ class DAPPServer(DAPPCommunicator):
         super(DAPPServer, self).__init__(protocol_version, logger)
         self.proc = proc
 
-    def send_msg(self, msg_type, ctxt=None, data=None):
+    def _send_msg(self, msg_type, ctxt, data):
         # TODO: check msg_type and data? we probably trust ourselves that we're sending a
         #  properly formed message, so let's not check anything here for now
         send_msg = {'msg_type': msg_type}
@@ -236,7 +258,7 @@ class DAPPServer(DAPPCommunicator):
     def send_msg_command_exception(self, ctxt=None, exception=''):
         self.send_msg(msg_type='command_exception', ctxt=ctxt, data={'exception': exception})
 
-    def recv_msg(self, allowed_types=None):
+    def _recv_msg(self, allowed_types=None):
         # throughout this method, we strip just the trailing newline
         #  from proc.stdout, since we want to get precise lines (whitespace can be significant)
         lines = []
@@ -285,7 +307,7 @@ class DAPPClient(DAPPCommunicator):
         else:
             self.write_fd = sys.stdout if six.PY2 else sys.stdout.buffer
 
-    def send_msg(self, msg_type, ctxt=None, data=None):
+    def _send_msg(self, msg_type, ctxt=None, data=None):
         # TODO: minor code duplication with the method in DAPPServer, maybe refactor
         send_msg = {'msg_type': msg_type}
         if data:
@@ -303,7 +325,7 @@ class DAPPClient(DAPPCommunicator):
         """A shortcut to send "finished" message."""
         self.send_msg(msg_type='finished', ctxt=ctxt, data={'lres': lres, 'res':res})
 
-    def recv_msg(self, allowed_types=None):
+    def _recv_msg(self, allowed_types=None):
         lines = []
         line = ''
         while line != 'STOP':
