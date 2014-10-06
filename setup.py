@@ -10,8 +10,6 @@ try:
 except:
     from distutils.core import setup, find_packages, Command
 
-import dapp
-
 class PyTest(Command):
     # this is cut'n'pasted from DevAssistant setup.py; we should refactor it in
     #  a simple standalone library
@@ -72,7 +70,7 @@ class PyTest(Command):
 
 setup(
     name='dapp',
-    version=dapp.__version__,
+    version='0.2.0.dev1',
     description='Library implementing DevAssistant PingPong protocol',
     long_description=''.join(open('README.rst').readlines()),
     keywords='devassistant,pipe,protocol,pingpong',
