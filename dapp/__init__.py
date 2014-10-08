@@ -260,7 +260,7 @@ class DAPPServer(DAPPCommunicator):
         super(DAPPServer, self).__init__(protocol_version, logger)
         self.proc = proc
 
-    def _send_msg(self, msg_type, ctxt, data):
+    def _send_msg(self, msg_type, ctxt, data=None):
         # TODO: check msg_type and data? we probably trust ourselves that we're sending a
         #  properly formed message, so let's not check anything here for now
         send_msg = {'msg_type': msg_type}
@@ -279,14 +279,14 @@ class DAPPServer(DAPPCommunicator):
                 msg += 'Subprocess output:\n' + out
             raise DAPPException(msg)
 
-    def send_msg_run(self, ctxt=None):
+    def send_msg_run(self, ctxt):
         """A shortcut to send "run" message."""
         self.send_msg(msg_type='run', ctxt=ctxt)
 
-    def send_msg_command_result(self, ctxt=None, lres=False, res=''):
+    def send_msg_command_result(self, ctxt, lres=False, res=''):
         self.send_msg(msg_type='command_result', ctxt=ctxt, data={'lres': lres, 'res': res})
 
-    def send_msg_command_exception(self, ctxt=None, exception=''):
+    def send_msg_command_exception(self, ctxt, exception=''):
         self.send_msg(msg_type='command_exception', ctxt=ctxt, data={'exception': exception})
 
     def _recv_msg(self, allowed_types=None):
@@ -338,7 +338,7 @@ class DAPPClient(DAPPCommunicator):
         else:
             self.write_fd = sys.stdout if six.PY2 else sys.stdout.buffer
 
-    def _send_msg(self, msg_type, ctxt=None, data=None):
+    def _send_msg(self, msg_type, ctxt, data=None):
         # TODO: minor code duplication with the method in DAPPServer, maybe refactor
         send_msg = {'msg_type': msg_type}
         if data:
@@ -348,11 +348,11 @@ class DAPPClient(DAPPCommunicator):
         self.write_fd.write(msg)
         self.write_fd.flush()
 
-    def send_msg_failed(self, ctxt=None, fail_desc=''):
+    def send_msg_failed(self, ctxt, fail_desc=''):
         """A shortcut to send "fail" message."""
         self.send_msg(msg_type='failed', ctxt=ctxt, data={'fail_desc': fail_desc})
 
-    def send_msg_finished(self, ctxt=None, lres=False, res=''):
+    def send_msg_finished(self, ctxt, lres=False, res=''):
         """A shortcut to send "finished" message."""
         self.send_msg(msg_type='finished', ctxt=ctxt, data={'lres': lres, 'res':res})
 
@@ -413,13 +413,13 @@ class DAPPClient(DAPPCommunicator):
         # send "finished" message to DevAssistant
         self.send_msg_finished(ctxt, lres=run_result[0], res=run_result[1])
 
-    def call_command(self, command_type, command_input, ctxt):
+    def call_command(self, ctxt, command_type, command_input):
         """Call a DevAssistant command.
 
         Args:
+            ctxt: the global context
             command_type: DevAssistant command type
             command_input: command input for the called command
-            ctxt: the global context
 
         Returns:
             2-tuple - logical result of command and result of command

@@ -9,7 +9,7 @@ from test.communicator_test_case import CommunicatorTestCase
 
 class MyClient(DAPPClient):
     def run(self, ctxt):
-        self.call_command('foo', 'bar', ctxt)
+        self.call_command(ctxt, 'foo', 'bar')
         return True, 'success'
 
 
@@ -26,19 +26,19 @@ class TestClient(CommunicatorTestCase):
         self._write_msg_received(seek='end')
         self._write_msg(self.s_no_such_cmd_msg_lines, seek='start')
         with pytest.raises(DAPPNoSuchCommand):
-            self.c.call_command('foo', 'bar', {})
+            self.c.call_command({}, 'foo', 'bar')
 
     def test_call_command_command_exception(self):
         self._write_msg_received(seek='end')
         self._write_msg(self.s_cmd_exc_msg_lines, seek='start')
         with pytest.raises(DAPPCommandException):
-            self.c.call_command('foo', 'bar', {})
+            self.c.call_command({}, 'foo', 'bar')
 
     def test_call_command_ok(self):
         self._write_msg_received(seek='end')
         self._write_msg(self.s_cmd_ok_msg_lines, seek='start')
         d = {}
-        lres, res = self.c.call_command('foo', 'bar', d)
+        lres, res = self.c.call_command(d, 'foo', 'bar')
         assert lres == True
         assert res == 'result'
         assert d == {'spam': 'spam', 'foo': 'bar'}
