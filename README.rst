@@ -47,7 +47,7 @@ and can look like this::
               name = ctxt['name'].capitalize()
           else:
               name = 'Stranger'
-          self.call_command('log_i', 'Hello {n}!'.format(n=name), ctxt)
+          self.call_command(ctxt, 'log_i', 'Hello {n}!'.format(n=name))
           return (True, 'I greeted him!')
 
   if __name__ == '__main__':
@@ -58,12 +58,12 @@ Things to Note
 
 - The PingPong script class has to subclass ``dapp.DAPPClient``.
 - The ``run`` method has to accept two arguments, ``self`` (Python specific argument pointing to
-  the object) and ``ctxt``. The ``ctxt`` is a dict (Python mapping type) that holds the global context
-  of the Yaml DSL (e.g. it contains the ``name`` argument, if it was specified by user on command
-  line/in GUI).
+  the object) and ``ctxt``. The ``ctxt`` is a dict (Python mapping type) that holds the global
+  context   of the Yaml DSL (e.g. it contains the ``name`` argument, if it was specified by user
+  on command line/in GUI).
 - You can utilize DevAssistant commands [1] by calling ``call_command`` method. This takes three
-  arguments - *command type*, *command input* and global context. The first two are the same as
-  explained at [1], the third is (possibly modified) context that was passed to the ``run`` method.
+  arguments - global context, *command type* and *command input*. The first is (possibly modified)
+  context that was passed to the ``run`` method and the other two are the same as explained at [1].
 - The ``ctxt`` dict can possibly get modified by running the command, check documentation of every
   specific command to see what it does and whether it modifies anything in the global context.
 - The ``call_command`` method returns a 2-tuple - *logical result* and *result* of the command.
