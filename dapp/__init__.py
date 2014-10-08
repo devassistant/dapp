@@ -387,7 +387,7 @@ class DAPPClient(DAPPCommunicator):
         """
         # wait for "run" message
         try:
-            msg = self.recv_msg(allowed_types=['run'])
+            msg = self.recv_msg(allowed_types=['run'], timeout=10)
         except DAPPException as e:
             self.send_msg_failed(ctxt=None, fail_desc=traceback.format_exc())
             sys.exit(1)
