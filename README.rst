@@ -2,7 +2,8 @@ DevAssistant PingPong
 =====================
 
 Library implementing protocol used for communication between DevAssistant and PingPong
-scripts (a.k.a. executable assistants). The protocol specification can be found at TODO:link.
+scripts (a.k.a. executable assistants). The protocol specification can be found at
+http://docs.devassistant.org/en/latest/developer_documentation/create_assistant/pingpong/how_it_works_reference.html.
 
 Note that this library implements both "server" and "client" side. The "server" side
 is only used by DevAssistant itself. If you're considering implementing a DevAssistant
