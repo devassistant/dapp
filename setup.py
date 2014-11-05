@@ -78,7 +78,7 @@ setup(
     author_email='bkabrda@redhat.com',
     license='GPLv2+',
     packages=find_packages(exclude=['test']),
-    install_requires=['PyYAML'],
+    install_requires=['PyYAML', 'six'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
